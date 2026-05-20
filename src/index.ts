@@ -71,9 +71,7 @@ export const spellcraftPrivacyScaleRollout: RolloutDescriptor = Object.freeze({
     "Rolls out minimal specialization payloads and documented spellcraft throughput assumptions.",
 });
 
-export const spellcraftFieldPolicies = Object.freeze<
-  readonly SpellcraftFieldPolicy[]
->([
+const rawSpellcraftFieldPolicies: SpellcraftFieldPolicy[] = [
   {
     field: "casterSubjectId",
     sensitivity: "pseudonymous",
@@ -116,7 +114,11 @@ export const spellcraftFieldPolicies = Object.freeze<
     justification:
       "Update timestamp supports bounded replay ordering for high-throughput specialization decisions.",
   },
-]);
+];
+
+export const spellcraftFieldPolicies = Object.freeze(
+  rawSpellcraftFieldPolicies.map((policy) => Object.freeze({ ...policy }))
+);
 
 export const defaultSpellcraftThroughputAssumptions: SpellcraftThroughputAssumptions =
   Object.freeze({
@@ -149,6 +151,15 @@ function assertPositiveSafeInteger(value: number, label: string): void {
   }
 }
 
+const iso8601DateRegex =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function assertValidUpdatedAtIso(value: string): void {
+  if (!iso8601DateRegex.test(value) || Number.isNaN(Date.parse(value))) {
+    throw new Error("updatedAtIso must be an ISO-8601 timestamp");
+  }
+}
+
 export function createSpellcraftSpecializationRecord(
   input: SpellcraftSpecializationRecord
 ): SpellcraftSpecializationRecord {
@@ -157,6 +168,7 @@ export function createSpellcraftSpecializationRecord(
   assertNonEmptyString(input.specializationId, "specializationId");
   assertNonEmptyString(input.declarationFormatVersion, "declarationFormatVersion");
   assertNonEmptyString(input.updatedAtIso, "updatedAtIso");
+  assertValidUpdatedAtIso(input.updatedAtIso);
 
   if (!isSpellcraftAuthoringMode(input.authoringMode)) {
     throw new Error("authoringMode must be a supported spellcraft authoring mode");

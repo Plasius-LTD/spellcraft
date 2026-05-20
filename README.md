@@ -25,6 +25,7 @@ npm install @plasius/spellcraft
 - spellcraft access state
 - academy-gated authoring readiness
 - declaration preview metadata
+- privacy-safe specialization payloads and spellcraft throughput assumptions
 
 ## Demo
 
@@ -36,7 +37,12 @@ node demo/example.mjs
 ## Usage
 
 ```ts
-import { createSpellcraftAccessState } from "@plasius/spellcraft";
+import {
+  createSpellcraftAccessState,
+  createSpellcraftSpecializationRecord,
+  defaultSpellcraftThroughputAssumptions,
+  spellcraftPrivacyScaleRollout,
+} from "@plasius/spellcraft";
 
 const access = createSpellcraftAccessState({
   academyEligible: true,
@@ -44,8 +50,37 @@ const access = createSpellcraftAccessState({
   declarationFormatVersion: "1.0.0",
 });
 
-console.log(access.authoringMode);
+const specialization = createSpellcraftSpecializationRecord({
+  casterSubjectId: "caster-sub-1",
+  academyNodeId: "academy-1",
+  specializationId: "sigil-weaving",
+  authoringMode: access.authoringMode,
+  declarationFormatVersion: access.declarationFormatVersion,
+  updatedAtIso: new Date().toISOString(),
+});
+
+console.log(spellcraftPrivacyScaleRollout.featureFlagId);
+console.log(defaultSpellcraftThroughputAssumptions.maxDeclarationValidationsPerMinute);
+console.log(specialization.specializationId);
 ```
+
+## Privacy And Throughput Baseline
+
+The package exports an inherited rollout descriptor for the cross-repo feature
+flag `isekai.training-progression.privacy-scale.enabled`.
+
+When that rollout is enabled, package consumers should prefer the minimal
+`SpellcraftSpecializationRecord` contract:
+
+- `casterSubjectId` is the only player-linked identifier and is expected to be
+  pseudonymous
+- profile names, chat text, raw spell declarations, and contact data are
+  outside the package contract
+- `spellcraftFieldPolicies` documents the retention and sensitivity expectation
+  for every exported specialization field
+- `defaultSpellcraftThroughputAssumptions` publishes the validated authoring,
+  specialization, and declaration-validation envelope used by the package docs
+  and tests
 
 ## Governance
 

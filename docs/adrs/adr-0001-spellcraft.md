@@ -6,14 +6,19 @@ Accepted
 
 ## Context
 
-Spellcraft authoring needs a package boundary that stays authoritative and academy-gated instead of being absorbed into Player System guidance.
+Spellcraft authoring needs a package boundary that stays authoritative and
+academy-gated instead of being absorbed into Player System guidance.
 
 ## Decision
 
-`@plasius/spellcraft` will own spellcraft access and authoring-boundary contracts while the Player System remains a guided entry layer.
+`@plasius/spellcraft` will own spellcraft access, Player System handoff, and
+authoring-boundary contracts while the Player System remains a guided entry
+layer.
 
 ## Consequences
 
 - Spell authoring authority stays explicit.
 - Academy-gated access can be represented independently of UI.
+- Player System handoff data is explicit and testable rather than implicit in UI
+  flow.
 - Future declaration-format work has a package home.

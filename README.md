@@ -25,6 +25,17 @@ npm install @plasius/spellcraft
 - spellcraft access state
 - academy-gated authoring readiness
 - declaration preview metadata
+- Player System to spellcraft authority handoff payloads
+- spellcraft-owned validation and execution authority metadata
+
+## Player System Handoff
+
+The Player System may explain readiness, route a player toward academy gates,
+and collect intent, but it does not become the source of truth for spell
+authoring. Once a user crosses the academy gate, the handoff into
+`@plasius/spellcraft` must carry the feature flag, guidance source, academy
+track, readiness outcome, and requested authoring mode so spellcraft remains
+the authoritative validation and execution boundary.
 
 ## Demo
 
@@ -36,7 +47,11 @@ node demo/example.mjs
 ## Usage
 
 ```ts
-import { createSpellcraftAccessState } from "@plasius/spellcraft";
+import {
+  createSpellcraftAccessState,
+  createSpellcraftGuidanceHandoff,
+  spellcraftAuthorityBoundary,
+} from "@plasius/spellcraft";
 
 const access = createSpellcraftAccessState({
   academyEligible: true,
@@ -45,6 +60,20 @@ const access = createSpellcraftAccessState({
 });
 
 console.log(access.authoringMode);
+
+const handoff = createSpellcraftGuidanceHandoff({
+  authorityOwner: spellcraftAuthorityBoundary.authorityOwner,
+  featureFlagId: spellcraftAuthorityBoundary.featureFlagId,
+  guidanceSource: "player-system",
+  academyTrack: "academy.evocation",
+  readiness: "eligible",
+  declarationFormatVersion: access.declarationFormatVersion,
+  requestedAuthoringMode: access.authoringMode,
+  handoffSummary:
+    "Player System guidance has confirmed academy readiness and is yielding authority to spellcraft.",
+});
+
+console.log(handoff.guidanceSource);
 ```
 
 ## Governance

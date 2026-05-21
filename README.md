@@ -25,6 +25,8 @@ npm install @plasius/spellcraft
 - spellcraft access state
 - academy-gated authoring readiness
 - declaration preview metadata
+- specialization decision telemetry records
+- performance budget metadata for decision evaluation paths
 
 ## Demo
 
@@ -36,7 +38,11 @@ node demo/example.mjs
 ## Usage
 
 ```ts
-import { createSpellcraftAccessState } from "@plasius/spellcraft";
+import {
+  createSpellcraftAccessState,
+  createSpellcraftPerformanceBudget,
+  createSpecializationDecisionTelemetryEvent,
+} from "@plasius/spellcraft";
 
 const access = createSpellcraftAccessState({
   academyEligible: true,
@@ -45,6 +51,27 @@ const access = createSpellcraftAccessState({
 });
 
 console.log(access.authoringMode);
+
+const budget = createSpellcraftPerformanceBudget({
+  stage: "declaration-validation",
+  targetP95Ms: 75,
+  hardTimeoutMs: 150,
+  cacheable: false,
+  maxDependencyCalls: 2,
+});
+
+const event = createSpecializationDecisionTelemetryEvent({
+  decisionId: "decision-1",
+  stage: "authoring-mode-selection",
+  outcome: "allowed",
+  durationMs: 32,
+  academyEligible: access.academyEligible,
+  authoringMode: access.authoringMode,
+  declarationFormatVersion: access.declarationFormatVersion,
+  observedAt: new Date().toISOString(),
+});
+
+console.log(budget.targetP95Ms, event.stage);
 ```
 
 ## Governance

@@ -25,9 +25,20 @@ npm install @plasius/spellcraft
 - spellcraft access state
 - academy-gated authoring readiness
 - declaration preview metadata
+- Player System to spellcraft authority handoff payloads
+- spellcraft-owned validation and execution authority metadata
 - privacy-safe specialization payloads and spellcraft throughput assumptions
 - specialization decision telemetry records
 - performance budget metadata for decision evaluation paths
+
+## Player System Handoff
+
+The Player System may explain readiness, route a player toward academy gates,
+and collect intent, but it does not become the source of truth for spell
+authoring. Once a user crosses the academy gate, the handoff into
+`@plasius/spellcraft` must carry the feature flag, guidance source, academy
+track, readiness outcome, and requested authoring mode so spellcraft remains
+the authoritative validation and execution boundary.
 
 ## Demo
 
@@ -42,9 +53,11 @@ node demo/example.mjs
 import {
   createSpecializationDecisionTelemetryEvent,
   createSpellcraftAccessState,
+  createSpellcraftGuidanceHandoff,
   createSpellcraftPerformanceBudget,
   createSpellcraftSpecializationRecord,
   defaultSpellcraftThroughputAssumptions,
+  spellcraftAuthorityBoundary,
   spellcraftPrivacyScaleRollout,
 } from "@plasius/spellcraft";
 
@@ -52,6 +65,18 @@ const access = createSpellcraftAccessState({
   academyEligible: true,
   authoringMode: "guided",
   declarationFormatVersion: "1.0.0",
+});
+
+const handoff = createSpellcraftGuidanceHandoff({
+  authorityOwner: spellcraftAuthorityBoundary.authorityOwner,
+  featureFlagId: spellcraftAuthorityBoundary.featureFlagId,
+  guidanceSource: "player-system",
+  academyTrack: "academy.evocation",
+  readiness: "eligible",
+  declarationFormatVersion: access.declarationFormatVersion,
+  requestedAuthoringMode: access.authoringMode,
+  handoffSummary:
+    "Player System guidance has confirmed academy readiness and is yielding authority to spellcraft.",
 });
 
 const specialization = createSpellcraftSpecializationRecord({
@@ -84,7 +109,8 @@ const event = createSpecializationDecisionTelemetryEvent({
 
 console.log(spellcraftPrivacyScaleRollout.featureFlagId);
 console.log(defaultSpellcraftThroughputAssumptions.maxDeclarationValidationsPerMinute);
-console.log(specialization.specializationId, budget.targetP95Ms, event.stage);
+console.log(handoff.guidanceSource, specialization.specializationId);
+console.log(budget.targetP95Ms, event.stage);
 ```
 
 ## Privacy And Throughput Baseline

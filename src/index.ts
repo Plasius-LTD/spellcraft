@@ -31,10 +31,42 @@ export type SpecializationFailureCategory =
   | "upstream"
   | "policy";
 
+export type SpellcraftAuthorityOwner = "spellcraft";
+
+export type SpellcraftGuidanceSource =
+  | "player-system"
+  | "academy-advisor"
+  | "academy-catalog";
+
+export type SpellcraftHandoffReadiness =
+  | "eligible"
+  | "needs-academy-progress"
+  | "blocked";
+
 export interface SpellcraftAccessState {
   readonly academyEligible: boolean;
   readonly authoringMode: SpellcraftAuthoringMode;
   readonly declarationFormatVersion: string;
+}
+
+export interface SpellcraftAuthorityBoundary {
+  readonly authorityOwner: SpellcraftAuthorityOwner;
+  readonly featureFlagId: string;
+  readonly entryGate: "academy-eligibility";
+  readonly guidanceSources: readonly SpellcraftGuidanceSource[];
+  readonly validationAuthority: SpellcraftAuthorityOwner;
+  readonly executionAuthority: SpellcraftAuthorityOwner;
+}
+
+export interface SpellcraftGuidanceHandoff {
+  readonly authorityOwner: SpellcraftAuthorityOwner;
+  readonly featureFlagId: string;
+  readonly guidanceSource: SpellcraftGuidanceSource;
+  readonly academyTrack: string;
+  readonly readiness: SpellcraftHandoffReadiness;
+  readonly declarationFormatVersion: string;
+  readonly requestedAuthoringMode: SpellcraftAuthoringMode;
+  readonly handoffSummary: string;
 }
 
 export interface SpellcraftSpecializationRecord {
@@ -82,6 +114,11 @@ export interface SpellcraftPerformanceBudget {
 export const SPELLCRAFT_PACKAGE = "@plasius/spellcraft";
 export const SPELLCRAFT_ENV_PREFIX = "SPELLCRAFT";
 export const SPELLCRAFT_FEATURE_FLAG_ID = "isekai.spellcraft.enabled";
+const SPELLCRAFT_GUIDANCE_SOURCES = Object.freeze([
+  "player-system",
+  "academy-advisor",
+  "academy-catalog",
+] as const);
 export const SPELLCRAFT_PRIVACY_SCALE_FEATURE_FLAG_ID =
   "isekai.training-progression.privacy-scale.enabled";
 export const SPELLCRAFT_PRIVACY_SCALE_ENV_OVERRIDE =
@@ -98,6 +135,16 @@ export const packageDescriptor: PackageDescriptor = Object.freeze({
 function freezeReadonlyRecord<T extends object>(value: T): T {
   return Object.freeze({ ...value });
 }
+
+export const spellcraftAuthorityBoundary: SpellcraftAuthorityBoundary =
+  Object.freeze({
+    authorityOwner: "spellcraft",
+    featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+    entryGate: "academy-eligibility",
+    guidanceSources: SPELLCRAFT_GUIDANCE_SOURCES,
+    validationAuthority: "spellcraft",
+    executionAuthority: "spellcraft",
+  });
 
 export const spellcraftPrivacyScaleRollout: RolloutDescriptor = Object.freeze({
   featureFlagId: SPELLCRAFT_PRIVACY_SCALE_FEATURE_FLAG_ID,
@@ -239,12 +286,17 @@ export function createSpellcraftSpecializationRecord(
   assertNonEmptyString(input.casterSubjectId, "casterSubjectId");
   assertNonEmptyString(input.academyNodeId, "academyNodeId");
   assertNonEmptyString(input.specializationId, "specializationId");
-  assertNonEmptyString(input.declarationFormatVersion, "declarationFormatVersion");
+  assertNonEmptyString(
+    input.declarationFormatVersion,
+    "declarationFormatVersion"
+  );
   assertNonEmptyString(input.updatedAtIso, "updatedAtIso");
   assertValidUpdatedAtIso(input.updatedAtIso);
 
   if (!isSpellcraftAuthoringMode(input.authoringMode)) {
-    throw new Error("authoringMode must be a supported spellcraft authoring mode");
+    throw new Error(
+      "authoringMode must be a supported spellcraft authoring mode"
+    );
   }
 
   return freezeReadonlyRecord(input);
@@ -266,5 +318,11 @@ export function createSpellcraftThroughputAssumptions(
     "maxDeclarationValidationsPerMinute"
   );
 
+  return freezeReadonlyRecord(input);
+}
+
+export function createSpellcraftGuidanceHandoff(
+  input: SpellcraftGuidanceHandoff
+): SpellcraftGuidanceHandoff {
   return freezeReadonlyRecord(input);
 }

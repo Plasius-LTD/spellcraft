@@ -26,6 +26,8 @@ npm install @plasius/spellcraft
 - academy-gated authoring readiness
 - declaration preview metadata
 - privacy-safe specialization payloads and spellcraft throughput assumptions
+- specialization decision telemetry records
+- performance budget metadata for decision evaluation paths
 
 ## Demo
 
@@ -38,7 +40,9 @@ node demo/example.mjs
 
 ```ts
 import {
+  createSpecializationDecisionTelemetryEvent,
   createSpellcraftAccessState,
+  createSpellcraftPerformanceBudget,
   createSpellcraftSpecializationRecord,
   defaultSpellcraftThroughputAssumptions,
   spellcraftPrivacyScaleRollout,
@@ -59,9 +63,28 @@ const specialization = createSpellcraftSpecializationRecord({
   updatedAtIso: new Date().toISOString(),
 });
 
+const budget = createSpellcraftPerformanceBudget({
+  stage: "declaration-validation",
+  targetP95Ms: 75,
+  hardTimeoutMs: 150,
+  cacheable: false,
+  maxDependencyCalls: 2,
+});
+
+const event = createSpecializationDecisionTelemetryEvent({
+  decisionId: "decision-1",
+  stage: "authoring-mode-selection",
+  outcome: "allowed",
+  durationMs: 32,
+  academyEligible: access.academyEligible,
+  authoringMode: access.authoringMode,
+  declarationFormatVersion: access.declarationFormatVersion,
+  observedAt: new Date().toISOString(),
+});
+
 console.log(spellcraftPrivacyScaleRollout.featureFlagId);
 console.log(defaultSpellcraftThroughputAssumptions.maxDeclarationValidationsPerMinute);
-console.log(specialization.specializationId);
+console.log(specialization.specializationId, budget.targetP95Ms, event.stage);
 ```
 
 ## Privacy And Throughput Baseline

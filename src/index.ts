@@ -18,6 +18,19 @@ export type SpellcraftFieldRetention =
   | "authoritative-specialization"
   | "short-lived";
 
+export type SpecializationDecisionStage =
+  | "academy-eligibility"
+  | "declaration-validation"
+  | "authoring-mode-selection";
+
+export type SpecializationDecisionOutcome = "allowed" | "deferred" | "rejected";
+
+export type SpecializationFailureCategory =
+  | "timeout"
+  | "validation"
+  | "upstream"
+  | "policy";
+
 export interface SpellcraftAccessState {
   readonly academyEligible: boolean;
   readonly authoringMode: SpellcraftAuthoringMode;
@@ -46,6 +59,26 @@ export interface SpellcraftThroughputAssumptions {
   readonly maxDeclarationValidationsPerMinute: number;
 }
 
+export interface SpecializationDecisionTelemetryEvent {
+  readonly decisionId: string;
+  readonly stage: SpecializationDecisionStage;
+  readonly outcome: SpecializationDecisionOutcome;
+  readonly durationMs: number;
+  readonly academyEligible: boolean;
+  readonly authoringMode: SpellcraftAuthoringMode;
+  readonly declarationFormatVersion: string;
+  readonly observedAt: string;
+  readonly failureCategory?: SpecializationFailureCategory;
+}
+
+export interface SpellcraftPerformanceBudget {
+  readonly stage: SpecializationDecisionStage;
+  readonly targetP95Ms: number;
+  readonly hardTimeoutMs: number;
+  readonly cacheable: boolean;
+  readonly maxDependencyCalls: number;
+}
+
 export const SPELLCRAFT_PACKAGE = "@plasius/spellcraft";
 export const SPELLCRAFT_ENV_PREFIX = "SPELLCRAFT";
 export const SPELLCRAFT_FEATURE_FLAG_ID = "isekai.spellcraft.enabled";
@@ -62,6 +95,10 @@ export const packageDescriptor: PackageDescriptor = Object.freeze({
     "Academy-gated spellcraft access, authoring, and validation boundary contracts for Plasius.",
 });
 
+function freezeReadonlyRecord<T extends object>(value: T): T {
+  return Object.freeze({ ...value });
+}
+
 export const spellcraftPrivacyScaleRollout: RolloutDescriptor = Object.freeze({
   featureFlagId: SPELLCRAFT_PRIVACY_SCALE_FEATURE_FLAG_ID,
   envOverride: SPELLCRAFT_PRIVACY_SCALE_ENV_OVERRIDE,
@@ -71,7 +108,7 @@ export const spellcraftPrivacyScaleRollout: RolloutDescriptor = Object.freeze({
     "Rolls out minimal specialization payloads and documented spellcraft throughput assumptions.",
 });
 
-const rawSpellcraftFieldPolicies: SpellcraftFieldPolicy[] = [
+const rawSpellcraftFieldPolicies: readonly SpellcraftFieldPolicy[] = [
   {
     field: "casterSubjectId",
     sensitivity: "pseudonymous",
@@ -116,9 +153,8 @@ const rawSpellcraftFieldPolicies: SpellcraftFieldPolicy[] = [
   },
 ];
 
-export const spellcraftFieldPolicies = Object.freeze(
-  rawSpellcraftFieldPolicies.map((policy) => Object.freeze({ ...policy }))
-);
+export const spellcraftFieldPolicies: readonly SpellcraftFieldPolicy[] =
+  Object.freeze(rawSpellcraftFieldPolicies.map(freezeReadonlyRecord));
 
 export const defaultSpellcraftThroughputAssumptions: SpellcraftThroughputAssumptions =
   Object.freeze({
@@ -136,7 +172,19 @@ export function isSpellcraftAuthoringMode(
 export function createSpellcraftAccessState(
   input: SpellcraftAccessState
 ): SpellcraftAccessState {
-  return Object.freeze({ ...input });
+  return freezeReadonlyRecord(input);
+}
+
+export function createSpecializationDecisionTelemetryEvent(
+  input: SpecializationDecisionTelemetryEvent
+): SpecializationDecisionTelemetryEvent {
+  return freezeReadonlyRecord(input);
+}
+
+export function createSpellcraftPerformanceBudget(
+  input: SpellcraftPerformanceBudget
+): SpellcraftPerformanceBudget {
+  return freezeReadonlyRecord(input);
 }
 
 function assertNonEmptyString(value: string, label: string): void {
@@ -152,10 +200,35 @@ function assertPositiveSafeInteger(value: number, label: string): void {
 }
 
 const iso8601DateRegex =
-  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
+
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
 
 function assertValidUpdatedAtIso(value: string): void {
-  if (!iso8601DateRegex.test(value) || Number.isNaN(Date.parse(value))) {
+  const match = iso8601DateRegex.exec(value);
+  if (!match || Number.isNaN(Date.parse(value))) {
+    throw new Error("updatedAtIso must be an ISO-8601 timestamp");
+  }
+
+  const [, yearRaw, monthRaw, dayRaw, hourRaw, minuteRaw, secondRaw] = match;
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
+  const second = Number(secondRaw);
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > getDaysInMonth(year, month) ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59
+  ) {
     throw new Error("updatedAtIso must be an ISO-8601 timestamp");
   }
 }
@@ -174,7 +247,7 @@ export function createSpellcraftSpecializationRecord(
     throw new Error("authoringMode must be a supported spellcraft authoring mode");
   }
 
-  return Object.freeze({ ...input });
+  return freezeReadonlyRecord(input);
 }
 
 export function createSpellcraftThroughputAssumptions(
@@ -193,5 +266,5 @@ export function createSpellcraftThroughputAssumptions(
     "maxDeclarationValidationsPerMinute"
   );
 
-  return Object.freeze({ ...input });
+  return freezeReadonlyRecord(input);
 }

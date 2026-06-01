@@ -10,6 +10,8 @@ Provide a package-standard bootstrap for spellcraft authority.
 - spellcraft access-state contract
 - explicit Player System to spellcraft authority-handoff contract
 - authority-boundary metadata for validation and execution ownership
+- specialization decision telemetry contract
+- decision-path performance-budget metadata
 - access-state helper
 - demo and test scaffolding
 

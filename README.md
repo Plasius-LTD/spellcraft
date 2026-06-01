@@ -27,6 +27,9 @@ npm install @plasius/spellcraft
 - declaration preview metadata
 - Player System to spellcraft authority handoff payloads
 - spellcraft-owned validation and execution authority metadata
+- privacy-safe specialization payloads and spellcraft throughput assumptions
+- specialization decision telemetry records
+- performance budget metadata for decision evaluation paths
 
 ## Player System Handoff
 
@@ -48,9 +51,14 @@ node demo/example.mjs
 
 ```ts
 import {
+  createSpecializationDecisionTelemetryEvent,
   createSpellcraftAccessState,
   createSpellcraftGuidanceHandoff,
+  createSpellcraftPerformanceBudget,
+  createSpellcraftSpecializationRecord,
+  defaultSpellcraftThroughputAssumptions,
   spellcraftAuthorityBoundary,
+  spellcraftPrivacyScaleRollout,
 } from "@plasius/spellcraft";
 
 const access = createSpellcraftAccessState({
@@ -58,8 +66,6 @@ const access = createSpellcraftAccessState({
   authoringMode: "guided",
   declarationFormatVersion: "1.0.0",
 });
-
-console.log(access.authoringMode);
 
 const handoff = createSpellcraftGuidanceHandoff({
   authorityOwner: spellcraftAuthorityBoundary.authorityOwner,
@@ -73,8 +79,57 @@ const handoff = createSpellcraftGuidanceHandoff({
     "Player System guidance has confirmed academy readiness and is yielding authority to spellcraft.",
 });
 
-console.log(handoff.guidanceSource);
+const specialization = createSpellcraftSpecializationRecord({
+  casterSubjectId: "caster-sub-1",
+  academyNodeId: "academy-1",
+  specializationId: "sigil-weaving",
+  authoringMode: access.authoringMode,
+  declarationFormatVersion: access.declarationFormatVersion,
+  updatedAtIso: new Date().toISOString(),
+});
+
+const budget = createSpellcraftPerformanceBudget({
+  stage: "declaration-validation",
+  targetP95Ms: 75,
+  hardTimeoutMs: 150,
+  cacheable: false,
+  maxDependencyCalls: 2,
+});
+
+const event = createSpecializationDecisionTelemetryEvent({
+  decisionId: "decision-1",
+  stage: "authoring-mode-selection",
+  outcome: "allowed",
+  durationMs: 32,
+  academyEligible: access.academyEligible,
+  authoringMode: access.authoringMode,
+  declarationFormatVersion: access.declarationFormatVersion,
+  observedAt: new Date().toISOString(),
+});
+
+console.log(spellcraftPrivacyScaleRollout.featureFlagId);
+console.log(defaultSpellcraftThroughputAssumptions.maxDeclarationValidationsPerMinute);
+console.log(handoff.guidanceSource, specialization.specializationId);
+console.log(budget.targetP95Ms, event.stage);
 ```
+
+## Privacy And Throughput Baseline
+
+The package exports an inherited rollout descriptor for the cross-repo feature
+flag `isekai.training-progression.privacy-scale.enabled`.
+
+When that rollout is enabled, package consumers should prefer the minimal
+`SpellcraftSpecializationRecord` contract:
+
+- `casterSubjectId` is the only player-linked identifier and is expected to be
+  pseudonymous
+- profile names, chat text, raw spell declarations, and contact data are
+  outside the package contract
+- `spellcraftFieldPolicies` documents the retention and sensitivity expectation
+  for every exported specialization field
+- `defaultSpellcraftThroughputAssumptions` publishes the validated authoring,
+  specialization, and declaration-validation envelope used by the package docs
+  and tests
 
 ## Governance
 

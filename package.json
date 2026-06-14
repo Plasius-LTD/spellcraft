@@ -1,6 +1,6 @@
 {
   "name": "@plasius/spellcraft",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Academy-gated spellcraft access, authoring, and validation boundary contracts for Plasius",
   "type": "module",
   "sideEffects": false,

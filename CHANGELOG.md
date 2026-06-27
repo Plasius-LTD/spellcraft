@@ -11,7 +11,7 @@ All notable changes to this project will be documented in this file.
   - (placeholder)
 
 - **Fixed**
-  - (placeholder)
+  - Reject malformed access-state, telemetry, performance-budget, and guidance-handoff payloads before freezing spellcraft contracts.
 
 - **Security**
   - (placeholder)

@@ -282,7 +282,7 @@ export function createSpecializationDecisionTelemetryEvent(
   );
   assertNonEmptyString(input.observedAt, "observedAt");
   assertValidIsoTimestamp(input.observedAt, "observedAt");
-  assertNonNegativeSafeInteger(input.durationMs, "durationMs");
+  assertNonNegativeFiniteNumber(input.durationMs, "durationMs");
 
   if (!isSpecializationDecisionStage(input.stage)) {
     throw new Error("stage must be a supported specialization decision stage");
@@ -343,6 +343,12 @@ function assertPositiveSafeInteger(value: number, label: string): void {
 function assertNonNegativeSafeInteger(value: number, label: string): void {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new Error(`${label} must be a non-negative safe integer`);
+  }
+}
+
+function assertNonNegativeFiniteNumber(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative finite number`);
   }
 }
 

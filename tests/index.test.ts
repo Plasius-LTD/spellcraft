@@ -121,6 +121,21 @@ describe("@plasius/spellcraft", () => {
     expect(event.failureCategory).toBe("policy");
   });
 
+  it("accepts fractional specialization telemetry durations", () => {
+    const event = createSpecializationDecisionTelemetryEvent({
+      decisionId: "decision-fractional",
+      stage: "declaration-validation",
+      outcome: "allowed",
+      durationMs: 12.7,
+      academyEligible: true,
+      authoringMode: "guided",
+      declarationFormatVersion: "1.0.0",
+      observedAt: "2026-05-22T00:00:00.000Z",
+    });
+
+    expect(event.durationMs).toBe(12.7);
+  });
+
   it("rejects invalid spellcraft telemetry payloads", () => {
     expect(() =>
       createSpecializationDecisionTelemetryEvent({
@@ -198,7 +213,20 @@ describe("@plasius/spellcraft", () => {
         declarationFormatVersion: "1.0.0",
         observedAt: "2026-05-21T00:00:00.000Z",
       })
-    ).toThrow("durationMs must be a non-negative safe integer");
+    ).toThrow("durationMs must be a non-negative finite number");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: Number.POSITIVE_INFINITY,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("durationMs must be a non-negative finite number");
 
     expect(() =>
       createSpecializationDecisionTelemetryEvent({

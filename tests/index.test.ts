@@ -45,6 +45,48 @@ describe("@plasius/spellcraft", () => {
     expect(Object.isFrozen(state)).toBe(true);
   });
 
+  it("supports advanced authoring and handoff variants", () => {
+    expect(
+      createSpellcraftAccessState({
+        academyEligible: false,
+        authoringMode: "advanced",
+        declarationFormatVersion: "2.0.0",
+      }).authoringMode
+    ).toBe("advanced");
+
+    const handoff = createSpellcraftGuidanceHandoff({
+      authorityOwner: "spellcraft",
+      featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+      guidanceSource: "academy-catalog",
+      academyTrack: "academy.chronomancy",
+      readiness: "blocked",
+      declarationFormatVersion: "2.0.0",
+      requestedAuthoringMode: "advanced",
+      handoffSummary: "Advanced authoring remains blocked pending academy review.",
+    });
+
+    expect(handoff.guidanceSource).toBe("academy-catalog");
+    expect(handoff.readiness).toBe("blocked");
+  });
+
+  it("rejects invalid spellcraft access state payloads", () => {
+    expect(() =>
+      createSpellcraftAccessState({
+        academyEligible: true,
+        authoringMode: "invalid" as never,
+        declarationFormatVersion: "1.0.0",
+      })
+    ).toThrow("authoringMode must be a supported spellcraft authoring mode");
+
+    expect(() =>
+      createSpellcraftAccessState({
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: " ",
+      })
+    ).toThrow("declarationFormatVersion must be a non-empty string");
+  });
+
   it("creates specialization decision telemetry", () => {
     const event = createSpecializationDecisionTelemetryEvent({
       decisionId: "decision-1",
@@ -62,6 +104,147 @@ describe("@plasius/spellcraft", () => {
     expect(Object.isFrozen(event)).toBe(true);
   });
 
+  it("records deferred and rejected telemetry variants", () => {
+    const event = createSpecializationDecisionTelemetryEvent({
+      decisionId: "decision-2",
+      stage: "academy-eligibility",
+      outcome: "rejected",
+      durationMs: 0,
+      academyEligible: false,
+      authoringMode: "advanced",
+      declarationFormatVersion: "2.0.0",
+      observedAt: "2026-05-22T00:00:00.000Z",
+      failureCategory: "policy",
+    });
+
+    expect(event.stage).toBe("academy-eligibility");
+    expect(event.failureCategory).toBe("policy");
+  });
+
+  it("accepts fractional specialization telemetry durations", () => {
+    const event = createSpecializationDecisionTelemetryEvent({
+      decisionId: "decision-fractional",
+      stage: "declaration-validation",
+      outcome: "allowed",
+      durationMs: 12.7,
+      academyEligible: true,
+      authoringMode: "guided",
+      declarationFormatVersion: "1.0.0",
+      observedAt: "2026-05-22T00:00:00.000Z",
+    });
+
+    expect(event.durationMs).toBe(12.7);
+  });
+
+  it("rejects invalid spellcraft telemetry payloads", () => {
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("decisionId must be a non-empty string");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "unknown" as never,
+        outcome: "allowed",
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("stage must be a supported specialization decision stage");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "unknown" as never,
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("outcome must be a supported specialization decision outcome");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "invalid" as never,
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("authoringMode must be a supported spellcraft authoring mode");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-02-31T00:00:00.000Z",
+      })
+    ).toThrow("observedAt must be an ISO-8601 timestamp");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: -1,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("durationMs must be a non-negative finite number");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: Number.POSITIVE_INFINITY,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+      })
+    ).toThrow("durationMs must be a non-negative finite number");
+
+    expect(() =>
+      createSpecializationDecisionTelemetryEvent({
+        decisionId: "decision-1",
+        stage: "authoring-mode-selection",
+        outcome: "allowed",
+        durationMs: 32,
+        academyEligible: true,
+        authoringMode: "guided",
+        declarationFormatVersion: "1.0.0",
+        observedAt: "2026-05-21T00:00:00.000Z",
+        failureCategory: "misconfigured" as never,
+      })
+    ).toThrow(
+      "failureCategory must be a supported specialization failure category"
+    );
+  });
+
   it("creates performance budget metadata", () => {
     const budget = createSpellcraftPerformanceBudget({
       stage: "declaration-validation",
@@ -73,6 +256,38 @@ describe("@plasius/spellcraft", () => {
 
     expect(budget.targetP95Ms).toBe(75);
     expect(Object.isFrozen(budget)).toBe(true);
+  });
+
+  it("rejects invalid spellcraft performance budgets", () => {
+    expect(() =>
+      createSpellcraftPerformanceBudget({
+        stage: "unknown" as never,
+        targetP95Ms: 75,
+        hardTimeoutMs: 150,
+        cacheable: false,
+        maxDependencyCalls: 2,
+      })
+    ).toThrow("stage must be a supported specialization decision stage");
+
+    expect(() =>
+      createSpellcraftPerformanceBudget({
+        stage: "declaration-validation",
+        targetP95Ms: 75,
+        hardTimeoutMs: 50,
+        cacheable: false,
+        maxDependencyCalls: 2,
+      })
+    ).toThrow("hardTimeoutMs must be greater than or equal to targetP95Ms");
+
+    expect(() =>
+      createSpellcraftPerformanceBudget({
+        stage: "academy-eligibility",
+        targetP95Ms: 75,
+        hardTimeoutMs: 150,
+        cacheable: false,
+        maxDependencyCalls: -1,
+      })
+    ).toThrow("maxDependencyCalls must be a non-negative safe integer");
   });
 
   it("exports the privacy and scale rollout metadata", () => {
@@ -225,5 +440,61 @@ describe("@plasius/spellcraft", () => {
     expect(handoff.guidanceSource).toBe("player-system");
     expect(handoff.readiness).toBe("eligible");
     expect(Object.isFrozen(handoff)).toBe(true);
+  });
+
+  it("rejects invalid spellcraft guidance handoff payloads", () => {
+    expect(() =>
+      createSpellcraftGuidanceHandoff({
+        authorityOwner: "academy" as never,
+        featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+        guidanceSource: "player-system",
+        academyTrack: "academy.evocation",
+        readiness: "eligible",
+        declarationFormatVersion: "1.0.0",
+        requestedAuthoringMode: "guided",
+        handoffSummary: "valid",
+      })
+    ).toThrow("authorityOwner must be spellcraft");
+
+    expect(() =>
+      createSpellcraftGuidanceHandoff({
+        authorityOwner: "spellcraft",
+        featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+        guidanceSource: "unknown" as never,
+        academyTrack: "academy.evocation",
+        readiness: "eligible",
+        declarationFormatVersion: "1.0.0",
+        requestedAuthoringMode: "guided",
+        handoffSummary: "valid",
+      })
+    ).toThrow("guidanceSource must be a supported spellcraft guidance source");
+
+    expect(() =>
+      createSpellcraftGuidanceHandoff({
+        authorityOwner: "spellcraft",
+        featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+        guidanceSource: "player-system",
+        academyTrack: "academy.evocation",
+        readiness: "not-ready" as never,
+        declarationFormatVersion: "1.0.0",
+        requestedAuthoringMode: "guided",
+        handoffSummary: "valid",
+      })
+    ).toThrow("readiness must be a supported spellcraft handoff readiness");
+
+    expect(() =>
+      createSpellcraftGuidanceHandoff({
+        authorityOwner: "spellcraft",
+        featureFlagId: SPELLCRAFT_FEATURE_FLAG_ID,
+        guidanceSource: "academy-advisor",
+        academyTrack: "academy.evocation",
+        readiness: "needs-academy-progress",
+        declarationFormatVersion: "1.0.0",
+        requestedAuthoringMode: "expert" as never,
+        handoffSummary: "valid",
+      })
+    ).toThrow(
+      "requestedAuthoringMode must be a supported spellcraft authoring mode"
+    );
   });
 });

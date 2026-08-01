@@ -216,21 +216,115 @@ export function isSpellcraftAuthoringMode(
   return value === "guided" || value === "advanced";
 }
 
+function isSpecializationDecisionStage(
+  value: string
+): value is SpecializationDecisionStage {
+  return (
+    value === "academy-eligibility"
+    || value === "declaration-validation"
+    || value === "authoring-mode-selection"
+  );
+}
+
+function isSpecializationDecisionOutcome(
+  value: string
+): value is SpecializationDecisionOutcome {
+  return value === "allowed" || value === "deferred" || value === "rejected";
+}
+
+function isSpecializationFailureCategory(
+  value: string
+): value is SpecializationFailureCategory {
+  return (
+    value === "timeout"
+    || value === "validation"
+    || value === "upstream"
+    || value === "policy"
+  );
+}
+
+function isSpellcraftGuidanceSource(
+  value: string
+): value is SpellcraftGuidanceSource {
+  return (SPELLCRAFT_GUIDANCE_SOURCES as readonly string[]).includes(value);
+}
+
+function isSpellcraftHandoffReadiness(
+  value: string
+): value is SpellcraftHandoffReadiness {
+  return value === "eligible" || value === "needs-academy-progress" || value === "blocked";
+}
+
 export function createSpellcraftAccessState(
   input: SpellcraftAccessState
 ): SpellcraftAccessState {
+  assertNonEmptyString(
+    input.declarationFormatVersion,
+    "declarationFormatVersion"
+  );
+
+  if (!isSpellcraftAuthoringMode(input.authoringMode)) {
+    throw new Error(
+      "authoringMode must be a supported spellcraft authoring mode"
+    );
+  }
+
   return freezeReadonlyRecord(input);
 }
 
 export function createSpecializationDecisionTelemetryEvent(
   input: SpecializationDecisionTelemetryEvent
 ): SpecializationDecisionTelemetryEvent {
+  assertNonEmptyString(input.decisionId, "decisionId");
+  assertNonEmptyString(
+    input.declarationFormatVersion,
+    "declarationFormatVersion"
+  );
+  assertNonEmptyString(input.observedAt, "observedAt");
+  assertValidIsoTimestamp(input.observedAt, "observedAt");
+  assertNonNegativeFiniteNumber(input.durationMs, "durationMs");
+
+  if (!isSpecializationDecisionStage(input.stage)) {
+    throw new Error("stage must be a supported specialization decision stage");
+  }
+
+  if (!isSpecializationDecisionOutcome(input.outcome)) {
+    throw new Error("outcome must be a supported specialization decision outcome");
+  }
+
+  if (!isSpellcraftAuthoringMode(input.authoringMode)) {
+    throw new Error(
+      "authoringMode must be a supported spellcraft authoring mode"
+    );
+  }
+
+  if (
+    input.failureCategory !== undefined
+    && !isSpecializationFailureCategory(input.failureCategory)
+  ) {
+    throw new Error(
+      "failureCategory must be a supported specialization failure category"
+    );
+  }
+
   return freezeReadonlyRecord(input);
 }
 
 export function createSpellcraftPerformanceBudget(
   input: SpellcraftPerformanceBudget
 ): SpellcraftPerformanceBudget {
+  assertPositiveSafeInteger(input.targetP95Ms, "targetP95Ms");
+  assertPositiveSafeInteger(input.hardTimeoutMs, "hardTimeoutMs");
+  assertNonNegativeSafeInteger(input.maxDependencyCalls, "maxDependencyCalls");
+
+  if (!isSpecializationDecisionStage(input.stage)) {
+    throw new Error("stage must be a supported specialization decision stage");
+  }
+
+  if (input.hardTimeoutMs < input.targetP95Ms) {
+    throw new Error("hardTimeoutMs must be greater than or equal to targetP95Ms");
+  }
+
   return freezeReadonlyRecord(input);
 }
 
@@ -246,6 +340,18 @@ function assertPositiveSafeInteger(value: number, label: string): void {
   }
 }
 
+function assertNonNegativeSafeInteger(value: number, label: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative safe integer`);
+  }
+}
+
+function assertNonNegativeFiniteNumber(value: number, label: string): void {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative finite number`);
+  }
+}
+
 const iso8601DateRegex =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 
@@ -253,10 +359,10 @@ function getDaysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-function assertValidUpdatedAtIso(value: string): void {
+function assertValidIsoTimestamp(value: string, label: string): void {
   const match = iso8601DateRegex.exec(value);
   if (!match || Number.isNaN(Date.parse(value))) {
-    throw new Error("updatedAtIso must be an ISO-8601 timestamp");
+    throw new Error(`${label} must be an ISO-8601 timestamp`);
   }
 
   const [, yearRaw, monthRaw, dayRaw, hourRaw, minuteRaw, secondRaw] = match;
@@ -276,7 +382,7 @@ function assertValidUpdatedAtIso(value: string): void {
     minute > 59 ||
     second > 59
   ) {
-    throw new Error("updatedAtIso must be an ISO-8601 timestamp");
+    throw new Error(`${label} must be an ISO-8601 timestamp`);
   }
 }
 
@@ -291,7 +397,7 @@ export function createSpellcraftSpecializationRecord(
     "declarationFormatVersion"
   );
   assertNonEmptyString(input.updatedAtIso, "updatedAtIso");
-  assertValidUpdatedAtIso(input.updatedAtIso);
+  assertValidIsoTimestamp(input.updatedAtIso, "updatedAtIso");
 
   if (!isSpellcraftAuthoringMode(input.authoringMode)) {
     throw new Error(
@@ -324,5 +430,31 @@ export function createSpellcraftThroughputAssumptions(
 export function createSpellcraftGuidanceHandoff(
   input: SpellcraftGuidanceHandoff
 ): SpellcraftGuidanceHandoff {
+  assertNonEmptyString(input.featureFlagId, "featureFlagId");
+  assertNonEmptyString(input.academyTrack, "academyTrack");
+  assertNonEmptyString(
+    input.declarationFormatVersion,
+    "declarationFormatVersion"
+  );
+  assertNonEmptyString(input.handoffSummary, "handoffSummary");
+
+  if (input.authorityOwner !== "spellcraft") {
+    throw new Error("authorityOwner must be spellcraft");
+  }
+
+  if (!isSpellcraftGuidanceSource(input.guidanceSource)) {
+    throw new Error("guidanceSource must be a supported spellcraft guidance source");
+  }
+
+  if (!isSpellcraftHandoffReadiness(input.readiness)) {
+    throw new Error("readiness must be a supported spellcraft handoff readiness");
+  }
+
+  if (!isSpellcraftAuthoringMode(input.requestedAuthoringMode)) {
+    throw new Error(
+      "requestedAuthoringMode must be a supported spellcraft authoring mode"
+    );
+  }
+
   return freezeReadonlyRecord(input);
 }

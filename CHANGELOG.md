@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+- **Added**
+  - (placeholder)
+
+- **Changed**
+  - (placeholder)
+
+- **Fixed**
+  - (placeholder)
+
+- **Security**
+  - (placeholder)
+
+## [0.1.12] - 2026-10-25
+
 - Refresh npm dependency lockfile to current supported stable versions (weekly maintenance, 2026-10-25).
 
 - **Added**
@@ -165,3 +179,4 @@ All notable changes to this project will be documented in this file.
 [0.1.9]: https://github.com/Plasius-LTD/spellcraft/releases/tag/v0.1.9
 [0.1.10]: https://github.com/Plasius-LTD/spellcraft/releases/tag/v0.1.10
 [0.1.11]: https://github.com/Plasius-LTD/spellcraft/releases/tag/v0.1.11
+[0.1.12]: https://github.com/Plasius-LTD/spellcraft/releases/tag/v0.1.12
